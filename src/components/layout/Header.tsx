@@ -9,7 +9,7 @@ interface HeaderProps {
 
 const Header = ({ title, subtitle }: HeaderProps) => {
   return (
-    <header className="h-16 border-b border-border bg-card/50 backdrop-blur-sm flex items-center justify-between px-6">
+    <header className="h-16 border-b border-border bg-card flex items-center justify-between px-6">
       <div>
         <h2 className="text-lg font-semibold text-foreground">{title}</h2>
         {subtitle && (
@@ -23,7 +23,7 @@ const Header = ({ title, subtitle }: HeaderProps) => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="全局搜索..."
-            className="w-64 pl-9 bg-secondary/50 border-border/50 focus:border-primary/50"
+            className="w-64 pl-9 bg-secondary border-border focus:border-primary"
           />
         </div>
 
