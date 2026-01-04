@@ -1,4 +1,4 @@
-import { FileText, Newspaper, Sparkles, TrendingUp, Users, Lock, Settings, Database, Key } from "lucide-react";
+import { FileText, Newspaper, Sparkles, TrendingUp, Users, Settings, Database, Key } from "lucide-react";
 import StatCard from "./StatCard";
 import RecentActivity from "./RecentActivity";
 import QuickActions from "./QuickActions";
@@ -48,20 +48,7 @@ const Dashboard = () => {
         />
         
         {/* 仅管理员和领导可见的敏感统计 */}
-        <PermissionGuard 
-          requiredRoles={permissions.dashboard.fullStats}
-          fallback={
-            <StatCard
-              title="AI对话次数"
-              value="***"
-              change="需更高权限"
-              changeType="neutral"
-              icon={Lock}
-              iconColor="text-muted-foreground"
-              delay={200}
-            />
-          }
-        >
+        <PermissionGuard requiredRoles={permissions.dashboard.fullStats}>
           <StatCard
             title="AI对话次数"
             value="892"
@@ -73,20 +60,7 @@ const Dashboard = () => {
           />
         </PermissionGuard>
 
-        <PermissionGuard 
-          requiredRoles={permissions.dashboard.fullStats}
-          fallback={
-            <StatCard
-              title="活跃用户"
-              value="***"
-              change="需更高权限"
-              changeType="neutral"
-              icon={Lock}
-              iconColor="text-muted-foreground"
-              delay={300}
-            />
-          }
-        >
+        <PermissionGuard requiredRoles={permissions.dashboard.fullStats}>
           <StatCard
             title="活跃用户"
             value="234"
@@ -102,23 +76,11 @@ const Dashboard = () => {
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Activity - 中层及以上可见完整内容 */}
-        <div className="lg:col-span-2">
-          <PermissionGuard 
-            requiredRoles={permissions.dashboard.userActivity}
-            fallback={
-              <div className="glass-card rounded-xl p-6">
-                <h3 className="text-lg font-semibold text-foreground mb-4">最近活动</h3>
-                <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                  <Lock className="w-12 h-12 mb-4 opacity-50" />
-                  <p className="text-sm">详细活动日志仅限中层及以上查看</p>
-                  <p className="text-xs mt-1">请联系管理员获取权限</p>
-                </div>
-              </div>
-            }
-          >
+        <PermissionGuard requiredRoles={permissions.dashboard.userActivity}>
+          <div className="lg:col-span-2">
             <RecentActivity />
-          </PermissionGuard>
-        </div>
+          </div>
+        </PermissionGuard>
 
         {/* Quick Actions */}
         <div>
