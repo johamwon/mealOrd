@@ -27,8 +27,8 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Stats Grid - 自适应布局 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <StatCard
           title="今日文档处理"
           value="128"
@@ -73,20 +73,13 @@ const Dashboard = () => {
         </PermissionGuard>
       </div>
 
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Activity - 中层及以上可见完整内容 */}
-        <PermissionGuard requiredRoles={permissions.dashboard.userActivity}>
-          <div className="lg:col-span-2">
-            <RecentActivity />
-          </div>
-        </PermissionGuard>
+      {/* Quick Actions - 全宽显示 */}
+      <QuickActions />
 
-        {/* Quick Actions */}
-        <div>
-          <QuickActions />
-        </div>
-      </div>
+      {/* Recent Activity - 中层及以上可见完整内容 */}
+      <PermissionGuard requiredRoles={permissions.dashboard.userActivity}>
+        <RecentActivity />
+      </PermissionGuard>
 
       {/* System Status - 仅管理员可见 */}
       <PermissionGuard requiredRoles={permissions.dashboard.systemStatus}>
