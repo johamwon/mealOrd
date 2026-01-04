@@ -1,4 +1,10 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { DingTalkUserInfo } from "@/types/dingtalk";
+import {
+  isDingTalkEnv,
+  getMockDingTalkUser,
+  convertDingTalkUserToSystemUser,
+} from "@/services/dingtalk";
 
 export type UserRole = "admin" | "leadership" | "middle" | "employee";
 
@@ -8,6 +14,10 @@ export interface User {
   role: UserRole;
   department: string;
   avatar?: string;
+  // 钉钉扩展字段
+  company?: string;
+  position?: string;
+  jobLevel?: string;
 }
 
 export interface AuthContextType {
@@ -16,37 +26,13 @@ export interface AuthContextType {
   switchRole: (role: UserRole) => void;
   hasPermission: (requiredRoles: UserRole[]) => boolean;
   isAuthenticated: boolean;
+  isLoading: boolean;
+  isDingTalk: boolean;
+  dingTalkInfo: DingTalkUserInfo | null;
+  loginWithDingTalk: (roleType?: UserRole) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// 模拟用户数据
-const mockUsers: Record<UserRole, User> = {
-  admin: {
-    id: "1",
-    name: "系统管理员",
-    role: "admin",
-    department: "信息技术部",
-  },
-  leadership: {
-    id: "2",
-    name: "李总",
-    role: "leadership",
-    department: "总经理办公室",
-  },
-  middle: {
-    id: "3",
-    name: "王经理",
-    role: "middle",
-    department: "市场部",
-  },
-  employee: {
-    id: "4",
-    name: "张员工",
-    role: "employee",
-    department: "研发部",
-  },
-};
 
 export const roleLabels: Record<UserRole, string> = {
   admin: "管理员",
@@ -63,16 +49,42 @@ export const roleColors: Record<UserRole, string> = {
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(mockUsers.admin);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [dingTalkInfo, setDingTalkInfo] = useState<DingTalkUserInfo | null>(null);
+  const isDingTalk = isDingTalkEnv();
 
-  const switchRole = (role: UserRole) => {
-    setUser(mockUsers[role]);
+  // 模拟钉钉登录
+  const loginWithDingTalk = async (roleType?: UserRole) => {
+    setIsLoading(true);
+    try {
+      // 开发环境使用模拟数据
+      const ddUser = await getMockDingTalkUser(roleType);
+      setDingTalkInfo(ddUser);
+      
+      const systemUser = convertDingTalkUserToSystemUser(ddUser);
+      setUser(systemUser);
+    } catch (error) {
+      console.error("钉钉登录失败:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 切换角色（演示用）
+  const switchRole = async (role: UserRole) => {
+    await loginWithDingTalk(role);
   };
 
   const hasPermission = (requiredRoles: UserRole[]) => {
     if (!user) return false;
     return requiredRoles.includes(user.role);
   };
+
+  // 初始化：自动尝试钉钉登录
+  useEffect(() => {
+    loginWithDingTalk("admin"); // 默认以管理员身份登录（演示）
+  }, []);
 
   return (
     <AuthContext.Provider
@@ -82,6 +94,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         switchRole,
         hasPermission,
         isAuthenticated: !!user,
+        isLoading,
+        isDingTalk,
+        dingTalkInfo,
+        loginWithDingTalk,
       }}
     >
       {children}
