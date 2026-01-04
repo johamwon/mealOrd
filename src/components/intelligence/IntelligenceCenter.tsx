@@ -1,15 +1,19 @@
 import { useState } from "react";
-import { Newspaper, Building2, Scale, Users, TrendingUp, Calendar, Send, Filter, RefreshCw } from "lucide-react";
+import { Newspaper, Building2, Scale, Users, TrendingUp, Calendar, Send, Filter, RefreshCw, Lock, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { PermissionGuard, usePermission } from "@/components/common/PermissionGuard";
+import { useAuth } from "@/contexts/AuthContext";
+import { permissions } from "@/config/permissions";
 
 const categories = [
   { id: "all", label: "全部", icon: Newspaper },
   { id: "policy", label: "政策法规", icon: Scale },
   { id: "industry", label: "行业动态", icon: TrendingUp },
-  { id: "competitor", label: "竞对追踪", icon: Building2 },
+  { id: "competitor", label: "竞对追踪", icon: Building2, requiresPermission: true },
   { id: "meeting", label: "重要会议", icon: Users },
+  { id: "confidential", label: "机密情报", icon: Lock, requiresPermission: true },
 ];
 
 const newsItems = [
@@ -22,6 +26,7 @@ const newsItems = [
     time: "2小时前",
     importance: "high",
     tags: ["数据安全", "合规"],
+    confidential: false,
   },
   {
     id: 2,
@@ -32,6 +37,7 @@ const newsItems = [
     time: "3小时前",
     importance: "medium",
     tags: ["AI", "大模型", "产业报告"],
+    confidential: false,
   },
   {
     id: 3,
@@ -42,6 +48,7 @@ const newsItems = [
     time: "4小时前",
     importance: "high",
     tags: ["竞品", "产品发布"],
+    confidential: false,
   },
   {
     id: 4,
@@ -52,9 +59,21 @@ const newsItems = [
     time: "5小时前",
     importance: "high",
     tags: ["中央会议", "数字经济"],
+    confidential: false,
   },
   {
     id: 5,
+    category: "confidential",
+    title: "【机密】竞争对手内部战略调整动向分析",
+    summary: "根据可靠渠道获悉，主要竞争对手正在进行重大战略调整，涉及组织架构、产品线规划等核心内容...",
+    source: "商业情报部",
+    time: "1小时前",
+    importance: "high",
+    tags: ["机密", "战略分析"],
+    confidential: true,
+  },
+  {
+    id: 6,
     category: "industry",
     title: "云计算市场Q3报告：国产化替代进程加速",
     summary: "第三季度国内云计算市场规模达到890亿元，同比增长32%，其中政务云、金融云增速最快...",
@@ -62,16 +81,36 @@ const newsItems = [
     time: "6小时前",
     importance: "medium",
     tags: ["云计算", "国产化"],
+    confidential: false,
   },
 ];
 
 const IntelligenceCenter = () => {
   const [activeCategory, setActiveCategory] = useState("all");
   const [selectedNews, setSelectedNews] = useState<number | null>(null);
+  const { user } = useAuth();
+  
+  const canViewCompetitor = usePermission(permissions.intelligence.viewCompetitor);
+  const canViewConfidential = usePermission(permissions.intelligence.viewConfidential);
+  const canConfigPush = usePermission(permissions.intelligence.pushConfig);
 
-  const filteredNews = activeCategory === "all"
-    ? newsItems
-    : newsItems.filter(item => item.category === activeCategory);
+  // 根据权限过滤分类
+  const visibleCategories = categories.filter(cat => {
+    if (cat.id === "competitor") return canViewCompetitor;
+    if (cat.id === "confidential") return canViewConfidential;
+    return true;
+  });
+
+  // 根据权限和分类过滤新闻
+  const filteredNews = newsItems.filter(item => {
+    // 机密情报权限检查
+    if (item.confidential && !canViewConfidential) return false;
+    // 竞对情报权限检查
+    if (item.category === "competitor" && !canViewCompetitor) return false;
+    // 分类过滤
+    if (activeCategory === "all") return true;
+    return item.category === activeCategory;
+  });
 
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col p-6">
@@ -81,7 +120,13 @@ const IntelligenceCenter = () => {
           <h2 className="text-xl font-semibold text-foreground">情报日报中心</h2>
           <p className="text-sm text-muted-foreground mt-1">
             <Calendar className="w-4 h-4 inline mr-1" />
-            2024年1月15日 · 已收集 {newsItems.length} 条情报
+            2024年1月15日 · 已收集 {filteredNews.length} 条情报
+            {!canViewConfidential && (
+              <span className="ml-2 text-xs text-muted-foreground">
+                <EyeOff className="w-3 h-3 inline mr-1" />
+                部分机密情报已隐藏
+              </span>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -93,16 +138,18 @@ const IntelligenceCenter = () => {
             <RefreshCw className="w-4 h-4 mr-2" />
             刷新
           </Button>
-          <Button size="sm">
-            <Send className="w-4 h-4 mr-2" />
-            推送日报
-          </Button>
+          <PermissionGuard requiredRoles={permissions.intelligence.pushConfig}>
+            <Button size="sm">
+              <Send className="w-4 h-4 mr-2" />
+              推送日报
+            </Button>
+          </PermissionGuard>
         </div>
       </div>
 
       {/* Category Tabs */}
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-        {categories.map((category) => (
+        {visibleCategories.map((category) => (
           <Button
             key={category.id}
             variant={activeCategory === category.id ? "default" : "outline"}
@@ -122,12 +169,21 @@ const IntelligenceCenter = () => {
           {filteredNews.map((news, index) => (
             <div
               key={news.id}
-              className="glass-card rounded-xl p-5 card-hover cursor-pointer animate-slide-up"
+              className={cn(
+                "glass-card rounded-xl p-5 card-hover cursor-pointer animate-slide-up",
+                news.confidential && "border-2 border-warning/30"
+              )}
               style={{ animationDelay: `${index * 100}ms` }}
               onClick={() => setSelectedNews(news.id)}
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
+                  {news.confidential && (
+                    <Badge className="bg-warning/20 text-warning border-0">
+                      <Lock className="w-3 h-3 mr-1" />
+                      机密
+                    </Badge>
+                  )}
                   <Badge
                     variant={news.importance === "high" ? "destructive" : "secondary"}
                     className={cn(
@@ -164,21 +220,23 @@ const IntelligenceCenter = () => {
         </div>
       </div>
 
-      {/* Push Settings */}
-      <div className="mt-6 glass-card rounded-xl p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Send className="w-5 h-5 text-primary" />
+      {/* Push Settings - 仅领导层及以上可见 */}
+      <PermissionGuard requiredRoles={permissions.intelligence.pushConfig}>
+        <div className="mt-6 glass-card rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Send className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">自动推送设置</p>
+                <p className="text-xs text-muted-foreground">每日 9:00 推送至：战略发展群、市场部群、研发群</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">自动推送设置</p>
-              <p className="text-xs text-muted-foreground">每日 9:00 推送至：战略发展群、市场部群、研发群</p>
-            </div>
+            <Button variant="outline" size="sm">配置推送</Button>
           </div>
-          <Button variant="outline" size="sm">配置推送</Button>
         </div>
-      </div>
+      </PermissionGuard>
     </div>
   );
 };

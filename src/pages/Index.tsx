@@ -6,6 +6,7 @@ import DocumentCenter from "@/components/documents/DocumentCenter";
 import IntelligenceCenter from "@/components/intelligence/IntelligenceCenter";
 import AIToolsCenter from "@/components/ai-tools/AIToolsCenter";
 import { Helmet } from "react-helmet";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 const tabConfig = {
   dashboard: {
@@ -31,7 +32,7 @@ const Index = () => {
   const config = tabConfig[activeTab as keyof typeof tabConfig];
 
   return (
-    <>
+    <AuthProvider>
       <Helmet>
         <title>智脑平台 - 企业级AI工具中心</title>
         <meta name="description" content="企业内部AI工具平台，提供文档智能处理、情报收集分析、AI助手推荐等功能" />
@@ -51,7 +52,7 @@ const Index = () => {
           </div>
         </main>
       </div>
-    </>
+    </AuthProvider>
   );
 };
 

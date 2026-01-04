@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Sparkles, Wand2, BookOpen, MessageSquare, ThumbsUp, ExternalLink, Copy, Check, BarChart3 } from "lucide-react";
+import { Sparkles, Wand2, BookOpen, MessageSquare, ThumbsUp, ExternalLink, Copy, Check, BarChart3, Lock, TrendingUp, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { PermissionGuard, usePermission } from "@/components/common/PermissionGuard";
+import { permissions } from "@/config/permissions";
 
 const aiModels = [
   {
@@ -49,6 +51,9 @@ const AIToolsCenter = () => {
   const [optimizedPrompt, setOptimizedPrompt] = useState("");
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const canViewStats = usePermission(permissions.aiTools.viewStats);
+  const canViewDetailedAnalysis = usePermission(permissions.aiTools.detailedAnalysis);
 
   const handleOptimize = () => {
     if (!userPrompt.trim()) return;
@@ -218,29 +223,81 @@ ${userPrompt}
             </div>
           </div>
 
-          {/* Usage Stats */}
-          <div className="glass-card rounded-xl p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <BarChart3 className="w-5 h-5 text-primary" />
-              <h4 className="text-base font-medium text-foreground">使用统计</h4>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-lg bg-secondary/30">
-                <p className="text-2xl font-bold text-foreground">156</p>
-                <p className="text-xs text-muted-foreground">今日优化次数</p>
+          {/* Usage Stats - 中层及以上可见 */}
+          <PermissionGuard 
+            requiredRoles={permissions.aiTools.viewStats}
+            fallback={
+              <div className="glass-card rounded-xl p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <BarChart3 className="w-5 h-5 text-muted-foreground" />
+                  <h4 className="text-base font-medium text-foreground">使用统计</h4>
+                  <Lock className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+                  <Lock className="w-8 h-8 mb-2 opacity-50" />
+                  <p className="text-sm">详细统计仅限中层及以上查看</p>
+                </div>
               </div>
-              <div className="p-4 rounded-lg bg-secondary/30">
-                <p className="text-2xl font-bold text-foreground">2.4K</p>
-                <p className="text-xs text-muted-foreground">本月总使用</p>
+            }
+          >
+            <div className="glass-card rounded-xl p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <BarChart3 className="w-5 h-5 text-primary" />
+                <h4 className="text-base font-medium text-foreground">使用统计</h4>
               </div>
-            </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 rounded-lg bg-secondary/30">
+                  <p className="text-2xl font-bold text-foreground">156</p>
+                  <p className="text-xs text-muted-foreground">今日优化次数</p>
+                </div>
+                <div className="p-4 rounded-lg bg-secondary/30">
+                  <p className="text-2xl font-bold text-foreground">2.4K</p>
+                  <p className="text-xs text-muted-foreground">本月总使用</p>
+                </div>
+              </div>
 
-            <p className="text-xs text-muted-foreground mt-4 text-center">
-              <MessageSquare className="w-3 h-3 inline mr-1" />
-              所有交互记录已保存，用于持续优化工具性能
-            </p>
-          </div>
+              <p className="text-xs text-muted-foreground mt-4 text-center">
+                <MessageSquare className="w-3 h-3 inline mr-1" />
+                所有交互记录已保存，用于持续优化工具性能
+              </p>
+            </div>
+          </PermissionGuard>
+
+          {/* Detailed Analysis - 仅领导层及以上可见 */}
+          <PermissionGuard requiredRoles={permissions.aiTools.detailedAnalysis}>
+            <div className="glass-card rounded-xl p-6 border-2 border-primary/20">
+              <div className="flex items-center gap-2 mb-4">
+                <TrendingUp className="w-5 h-5 text-primary" />
+                <h4 className="text-base font-medium text-foreground">深度分析报告</h4>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary">领导专属</span>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-primary" />
+                    <span className="text-sm">团队使用效率</span>
+                  </div>
+                  <span className="text-sm font-medium text-success">+23%</span>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    <span className="text-sm">AI辅助产出质量</span>
+                  </div>
+                  <span className="text-sm font-medium text-success">+18%</span>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4 text-primary" />
+                    <span className="text-sm">成本节约估算</span>
+                  </div>
+                  <span className="text-sm font-medium text-foreground">¥45,200/月</span>
+                </div>
+              </div>
+            </div>
+          </PermissionGuard>
         </div>
       </div>
     </div>
