@@ -1,16 +1,31 @@
 import { useState } from "react";
-import { Upload, FileText, Table, Search, MessageSquare, X, Send, Paperclip } from "lucide-react";
+import { Upload, FileText, Table, Search, MessageSquare, X, Send, Paperclip, Lock, Trash2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { PermissionGuard, usePermission } from "@/components/common/PermissionGuard";
+import { useAuth } from "@/contexts/AuthContext";
+import { permissions } from "@/config/permissions";
+import { Badge } from "@/components/ui/badge";
 
-const sampleDocuments = [
-  { id: 1, name: "财务报表Q3.xlsx", type: "excel", size: "2.4 MB", date: "2024-01-15", status: "已分析" },
-  { id: 2, name: "员工手册V2.0.docx", type: "word", size: "1.8 MB", date: "2024-01-14", status: "已索引" },
-  { id: 3, name: "项目计划书.pdf", type: "pdf", size: "5.2 MB", date: "2024-01-13", status: "已分析" },
-  { id: 4, name: "销售数据2024.xlsx", type: "excel", size: "3.1 MB", date: "2024-01-12", status: "处理中" },
+// 模拟文档数据，包含权限级别
+const allDocuments = [
+  { id: 1, name: "财务报表Q3.xlsx", type: "excel", size: "2.4 MB", date: "2024-01-15", status: "已分析", level: "company", department: "财务部" },
+  { id: 2, name: "员工手册V2.0.docx", type: "word", size: "1.8 MB", date: "2024-01-14", status: "已索引", level: "public", department: "人力资源部" },
+  { id: 3, name: "项目计划书.pdf", type: "pdf", size: "5.2 MB", date: "2024-01-13", status: "已分析", level: "department", department: "研发部" },
+  { id: 4, name: "销售数据2024.xlsx", type: "excel", size: "3.1 MB", date: "2024-01-12", status: "处理中", level: "department", department: "市场部" },
+  { id: 5, name: "战略规划2025.pptx", type: "ppt", size: "8.5 MB", date: "2024-01-10", status: "已分析", level: "leadership", department: "总经理办公室" },
+  { id: 6, name: "核心技术专利.pdf", type: "pdf", size: "12.3 MB", date: "2024-01-08", status: "已索引", level: "confidential", department: "研发部" },
 ];
+
+const levelLabels: Record<string, { label: string; color: string }> = {
+  public: { label: "公开", color: "bg-success/20 text-success" },
+  department: { label: "部门", color: "bg-primary/20 text-primary" },
+  company: { label: "公司", color: "bg-accent/20 text-accent" },
+  leadership: { label: "领导层", color: "bg-warning/20 text-warning" },
+  confidential: { label: "机密", color: "bg-destructive/20 text-destructive" },
+};
 
 const DocumentCenter = () => {
   const [selectedDoc, setSelectedDoc] = useState<number | null>(null);
@@ -18,6 +33,23 @@ const DocumentCenter = () => {
     { role: "assistant", content: "您好！请上传文档或选择已有文档，我可以帮您进行智能分析、数据提取和内容总结。所有处理均在本地完成，数据安全有保障。" }
   ]);
   const [inputMessage, setInputMessage] = useState("");
+  const { user } = useAuth();
+  
+  const canViewAll = usePermission(permissions.documents.viewAll);
+  const canViewDepartment = usePermission(permissions.documents.viewDepartment);
+  const canDelete = usePermission(permissions.documents.delete);
+
+  // 根据权限过滤可见文档
+  const visibleDocuments = allDocuments.filter(doc => {
+    // 管理员和领导可以看所有
+    if (canViewAll) return true;
+    // 中层可以看部门级及以下
+    if (canViewDepartment) {
+      return doc.level !== "confidential" && doc.level !== "leadership";
+    }
+    // 员工只能看公开文档
+    return doc.level === "public";
+  });
 
   const handleSendMessage = () => {
     if (!inputMessage.trim()) return;
@@ -56,11 +88,19 @@ const DocumentCenter = () => {
               className="pl-9 bg-secondary/50"
             />
           </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            可见文档: {visibleDocuments.length} / {allDocuments.length}
+            {!canViewAll && (
+              <span className="ml-1">
+                <Lock className="w-3 h-3 inline" />
+              </span>
+            )}
+          </p>
         </div>
 
         {/* Document List */}
         <div className="flex-1 overflow-auto p-4 space-y-2">
-          {sampleDocuments.map((doc) => (
+          {visibleDocuments.map((doc) => (
             <div
               key={doc.id}
               onClick={() => setSelectedDoc(doc.id)}
@@ -85,16 +125,39 @@ const DocumentCenter = () => {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{doc.name}</p>
                   <p className="text-xs text-muted-foreground">{doc.size} · {doc.date}</p>
-                  <span className={cn(
-                    "inline-block mt-1 text-xs px-2 py-0.5 rounded-full",
-                    doc.status === "已分析" ? "bg-success/20 text-success" :
-                    doc.status === "已索引" ? "bg-primary/20 text-primary" :
-                    "bg-warning/20 text-warning"
-                  )}>
-                    {doc.status}
-                  </span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={cn(
+                      "inline-block text-xs px-2 py-0.5 rounded-full",
+                      doc.status === "已分析" ? "bg-success/20 text-success" :
+                      doc.status === "已索引" ? "bg-primary/20 text-primary" :
+                      "bg-warning/20 text-warning"
+                    )}>
+                      {doc.status}
+                    </span>
+                    <span className={cn(
+                      "inline-block text-xs px-2 py-0.5 rounded-full",
+                      levelLabels[doc.level].color
+                    )}>
+                      {levelLabels[doc.level].label}
+                    </span>
+                  </div>
                 </div>
               </div>
+              
+              {/* Actions - 仅管理员/领导可删除 */}
+              {selectedDoc === doc.id && (
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
+                  <Button variant="ghost" size="sm" className="flex-1">
+                    <Eye className="w-4 h-4 mr-1" />
+                    查看
+                  </Button>
+                  <PermissionGuard requiredRoles={permissions.documents.delete}>
+                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </PermissionGuard>
+                </div>
+              )}
             </div>
           ))}
         </div>

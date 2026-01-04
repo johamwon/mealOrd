@@ -1,6 +1,7 @@
-import { Bell, Search, User } from "lucide-react";
+import { Bell, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { RoleSwitcher } from "@/components/common/RoleSwitcher";
 
 interface HeaderProps {
   title: string;
@@ -33,12 +34,8 @@ const Header = ({ title, subtitle }: HeaderProps) => {
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full" />
         </Button>
 
-        {/* User */}
-        <Button variant="ghost" size="icon" className="rounded-full">
-          <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center">
-            <User className="w-4 h-4 text-primary-foreground" />
-          </div>
-        </Button>
+        {/* Role Switcher */}
+        <RoleSwitcher />
       </div>
     </header>
   );
